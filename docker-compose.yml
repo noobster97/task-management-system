@@ -1,0 +1,46 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: task_manager
+      MYSQL_USER: task_user
+      MYSQL_PASSWORD: task_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      SECRET_KEY: local-secret-change-me
+      JWT_SECRET_KEY: local-jwt-secret-change-me
+      DATABASE_URL: mysql+pymysql://task_user:task_password@mysql:3306/task_manager
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000,http://localhost:8080
+      AUTO_CREATE_TABLES: "true"
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:5000
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

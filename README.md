@@ -52,7 +52,29 @@ frontend/
   nginx.conf
   package.json
 docker-compose.yml
-vercel.json
+```
+
+## Quick Start
+
+1. Install Docker and Docker Compose.
+2. Configure the environment files if you want to override the defaults:
+   - `backend/.env.example` for backend and database settings
+   - `frontend/.env.example` for the frontend API URL
+3. Start the full stack from the project root:
+
+```bash
+docker compose up --build
+```
+
+4. Open the application in your browser:
+   - Frontend: `http://localhost:8080`
+   - Backend API: `http://localhost:5000`
+   - MySQL: `localhost:3306`
+
+5. Stop the stack when finished:
+
+```bash
+docker compose down
 ```
 
 ## Main Features
@@ -97,22 +119,6 @@ vercel.json
 - Custom delete confirmation dialog
 - Toast notifications after create, update, and delete actions
 - Admin owner selection for task assignment
-
-## Run Locally With Docker Compose
-
-From the project root:
-
-```bash
-docker compose up --build
-```
-
-Local services:
-
-- Frontend: `http://localhost:8080`
-- Backend API: `http://localhost:5000`
-- MySQL: `localhost:3306`
-
-The backend creates the database tables automatically when `AUTO_CREATE_TABLES=true`.
 
 ## Run Backend Without Docker
 
@@ -306,20 +312,6 @@ Frontend production build:
 cd frontend
 npm install
 npm run build
-```
-
-## Hosting Notes
-
-The frontend is a static React build and can run on any static hosting platform. The backend is a Flask API and should run on a server or platform that supports long-running Python web services. The database should be a persistent MySQL instance.
-
-Required production environment values:
-
-```env
-SECRET_KEY=<secure-secret>
-JWT_SECRET_KEY=<secure-jwt-secret>
-DATABASE_URL=<mysql-connection-url>
-CORS_ORIGINS=<frontend-origin>
-VITE_API_BASE_URL=<backend-api-url>
 ```
 
 ## Security Notes

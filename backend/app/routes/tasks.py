@@ -1,3 +1,5 @@
+from datetime import date
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
@@ -6,6 +8,7 @@ from ..models import Task, User, db
 tasks_bp = Blueprint("tasks", __name__)
 
 ALLOWED_STATUSES = {"pending", "in_progress", "completed"}
+ALLOWED_PRIORITIES = {"low", "medium", "high"}
 
 
 def current_user():
@@ -27,6 +30,15 @@ def _json_body():
     return data, None
 
 
+def parse_due_date(value):
+    if value in (None, ""):
+        return None, None
+    try:
+        return date.fromisoformat(str(value)), None
+    except ValueError:
+        return None, "Due date must use YYYY-MM-DD format"
+
+
 @tasks_bp.get("/tasks")
 @jwt_required()
 def get_tasks():
@@ -46,16 +58,29 @@ def create_task():
     title = (data.get("title") or "").strip()
     description = (data.get("description") or "").strip()
     status = (data.get("status") or "pending").strip()
+    priority = (data.get("priority") or "medium").strip()
+    due_date, due_date_error = parse_due_date(data.get("due_date"))
     owner_id = data.get("user_id") if user.role == "admin" else user.id
 
     if not title:
         return jsonify({"message": "Title is required"}), 400
     if status not in ALLOWED_STATUSES:
         return jsonify({"message": "Invalid task status"}), 400
+    if priority not in ALLOWED_PRIORITIES:
+        return jsonify({"message": "Invalid task priority"}), 400
+    if due_date_error:
+        return jsonify({"message": due_date_error}), 400
     if not db.session.get(User, owner_id):
         return jsonify({"message": "Task owner not found"}), 404
 
-    task = Task(title=title, description=description, status=status, user_id=owner_id)
+    task = Task(
+        title=title,
+        description=description,
+        status=status,
+        priority=priority,
+        due_date=due_date,
+        user_id=owner_id,
+    )
     db.session.add(task)
     db.session.commit()
     return jsonify(task.to_dict()), 201
@@ -85,6 +110,16 @@ def update_task(task_id):
         if status not in ALLOWED_STATUSES:
             return jsonify({"message": "Invalid task status"}), 400
         task.status = status
+    if "priority" in data:
+        priority = (data.get("priority") or "").strip()
+        if priority not in ALLOWED_PRIORITIES:
+            return jsonify({"message": "Invalid task priority"}), 400
+        task.priority = priority
+    if "due_date" in data:
+        due_date, due_date_error = parse_due_date(data.get("due_date"))
+        if due_date_error:
+            return jsonify({"message": due_date_error}), 400
+        task.due_date = due_date
     if "user_id" in data and user.role == "admin":
         if not db.session.get(User, data["user_id"]):
             return jsonify({"message": "Task owner not found"}), 404

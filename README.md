@@ -12,7 +12,9 @@ A full-stack task management system built for the technical assessment. The appl
 - Lets admin users view and manage all tasks
 - Lets admins assign tasks to any registered user
 - Provides task search and status filtering in the dashboard
-- Provides a compact modern dashboard with glass-style panels and clear status indicators
+- Provides Kanban and list views for different task management workflows
+- Supports priority and due date tracking
+- Provides a compact modern dashboard with glass-style panels, clear status indicators, and toast feedback
 - Handles expired or invalid sessions by returning the user to login
 - Runs locally with Docker Compose using MySQL
 - Includes backend tests for auth, authorization, and task CRUD behavior
@@ -69,6 +71,7 @@ vercel.json
 - `PUT /tasks/<id>` updates a task
 - `DELETE /tasks/<id>` deletes a task
 - Valid task statuses are `pending`, `in_progress`, and `completed`
+- Valid task priorities are `low`, `medium`, and `high`
 
 ### Role-Based Access
 
@@ -82,12 +85,17 @@ vercel.json
 - Login and register screens
 - Task summary counts by status
 - Clickable status summary cards
+- Kanban board grouped by status
+- Compact list view for detailed editing
 - Add task form
 - Search tasks by title, description, or owner email
-- Filter tasks by status
+- Filter tasks by status, priority, and owner
 - Visual status badges for each task
+- Priority badges and overdue indicators
 - Edit tasks and save changes explicitly
 - Delete tasks
+- Custom delete confirmation dialog
+- Toast notifications after create, update, and delete actions
 - Admin owner selection for task assignment
 
 ## Run Locally With Docker Compose
@@ -206,11 +214,13 @@ Authorization: Bearer <jwt-token>
 {
   "title": "Prepare report",
   "description": "Finish documentation",
-  "status": "pending"
+  "status": "pending",
+  "priority": "high",
+  "due_date": "2026-06-01"
 }
 ```
 
-Admins may also pass `user_id` to assign a task to another user.
+Admins may also pass `user_id` to assign a task to another user. `due_date` is optional and should use `YYYY-MM-DD` format.
 
 ### Update Task
 
@@ -224,7 +234,9 @@ Authorization: Bearer <jwt-token>
 {
   "title": "Prepare final report",
   "description": "Finish documentation and testing",
-  "status": "completed"
+  "status": "completed",
+  "priority": "medium",
+  "due_date": "2026-06-10"
 }
 ```
 
@@ -264,6 +276,8 @@ Authorization: Bearer <jwt-token>
 | title | Task title |
 | description | Task details |
 | status | `pending`, `in_progress`, or `completed` |
+| priority | `low`, `medium`, or `high` |
+| due_date | Optional due date |
 | user_id | Owner user id |
 | created_at | Creation timestamp |
 | updated_at | Last update timestamp |
@@ -328,6 +342,8 @@ VITE_API_BASE_URL=<backend-api-url>
 - JWT attached to API calls: complete
 - Unauthorized request handling: complete
 - Admin and regular user authorization rules: complete
+- Priority and due date task metadata: complete
+- Kanban and list task views: complete
 - Dockerfiles: complete
 - Docker Compose with database: complete
 - README setup and test instructions: complete

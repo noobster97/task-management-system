@@ -12,6 +12,7 @@ A full-stack task management system built for the technical assessment. The appl
 - Lets admin users view and manage all tasks
 - Lets admins assign tasks to any registered user
 - Provides task search and status filtering in the dashboard
+- Provides a compact modern dashboard with glass-style panels and clear status indicators
 - Handles expired or invalid sessions by returning the user to login
 - Runs locally with Docker Compose using MySQL
 - Includes backend tests for auth, authorization, and task CRUD behavior
@@ -80,9 +81,11 @@ vercel.json
 
 - Login and register screens
 - Task summary counts by status
+- Clickable status summary cards
 - Add task form
 - Search tasks by title, description, or owner email
 - Filter tasks by status
+- Visual status badges for each task
 - Edit tasks and save changes explicitly
 - Delete tasks
 - Admin owner selection for task assignment

@@ -1,13 +1,15 @@
-import { LogOut, Plus, Save, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleDot, Clock3, LogOut, Plus, Save, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest } from "../services/api.js";
 
 const statuses = [
-  { value: "pending", label: "Pending" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending", Icon: CircleDot },
+  { value: "in_progress", label: "In Progress", Icon: Clock3 },
+  { value: "completed", label: "Completed", Icon: CheckCircle2 },
 ];
+
+const statusByValue = Object.fromEntries(statuses.map((status) => [status.value, status]));
 
 export default function Dashboard({ user, onLogout }) {
   const [tasks, setTasks] = useState([]);
@@ -19,10 +21,12 @@ export default function Dashboard({ user, onLogout }) {
   const [loading, setLoading] = useState(true);
 
   const counts = useMemo(() => {
-    return statuses.reduce((acc, status) => {
+    const totals = statuses.reduce((acc, status) => {
       acc[status.value] = tasks.filter((task) => task.status === status.value).length;
       return acc;
     }, {});
+    totals.all = tasks.length;
+    return totals;
   }, [tasks]);
 
   async function loadTasks() {
@@ -114,6 +118,9 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function deleteTask(taskId) {
+    if (!window.confirm("Delete this task?")) {
+      return;
+    }
     setError("");
     try {
       await apiRequest(`/tasks/${taskId}`, { method: "DELETE" });
@@ -126,13 +133,16 @@ export default function Dashboard({ user, onLogout }) {
   return (
     <main className="dashboard">
       <header className="topbar">
-        <div>
-          <h1>Tasks</h1>
-          <p>{user.role === "admin" ? "Admin view: all tasks" : "Your personal task list"}</p>
+        <div className="topbar-copy">
+          <span className="eyebrow">{user.role === "admin" ? "Admin workspace" : "Personal workspace"}</span>
+          <h1>Task Command Center</h1>
+          <p>{user.role === "admin" ? "Review ownership, progress, and priority work across the team." : "Plan, track, and finish your work from one focused board."}</p>
         </div>
         <div className="user-chip">
-          <span>{user.email}</span>
-          <strong>{user.role}</strong>
+          <div>
+            <span>{user.email}</span>
+            <strong>{user.role}</strong>
+          </div>
           <button className="icon-button" onClick={onLogout} aria-label="Logout" title="Logout">
             <LogOut size={18} />
           </button>
@@ -140,24 +150,35 @@ export default function Dashboard({ user, onLogout }) {
       </header>
 
       <section className="stats">
-        {statuses.map((status) => (
-          <div className="stat" key={status.value}>
-            <span>{status.label}</span>
-            <strong>{counts[status.value] || 0}</strong>
-          </div>
-        ))}
+        {statuses.map((status) => {
+          const StatusIcon = status.Icon;
+          return (
+            <button
+              type="button"
+              className={`stat ${filters.status === status.value ? "active" : ""}`}
+              key={status.value}
+              onClick={() => setFilters({ ...filters, status: status.value })}
+            >
+              <span><StatusIcon size={16} /> {status.label}</span>
+              <strong>{counts[status.value] || 0}</strong>
+            </button>
+          );
+        })}
       </section>
 
       <section className="task-layout">
         <form className="task-form" onSubmit={addTask}>
-          <h2>Add Task</h2>
+          <div className="panel-heading">
+            <h2>Add Task</h2>
+            <span>New item</span>
+          </div>
           <label>
             Title
-            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+            <input placeholder="e.g. Prepare API documentation" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           </label>
           <label>
             Description
-            <textarea rows="5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <textarea placeholder="Add context, acceptance notes, or next steps" rows="5" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </label>
           <label>
             Status
@@ -189,10 +210,16 @@ export default function Dashboard({ user, onLogout }) {
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               />
             </label>
-            <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}>
-              <option value="all">All statuses</option>
-              {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-            </select>
+            <div className="filter-tabs" aria-label="Filter by status">
+              <button type="button" className={filters.status === "all" ? "active" : ""} onClick={() => setFilters({ ...filters, status: "all" })}>
+                All <span>{counts.all}</span>
+              </button>
+              {statuses.map((status) => (
+                <button type="button" className={filters.status === status.value ? "active" : ""} key={status.value} onClick={() => setFilters({ ...filters, status: status.value })}>
+                  {status.label} <span>{counts[status.value] || 0}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {error && <div className="error">{error}</div>}
           {loading && <div className="empty">Loading tasks...</div>}
@@ -200,8 +227,20 @@ export default function Dashboard({ user, onLogout }) {
           {!loading && tasks.length > 0 && filteredTasks.length === 0 && <div className="empty">No matching tasks.</div>}
           {filteredTasks.map((task) => {
             const draft = drafts[task.id] || task;
+            const status = statusByValue[draft.status] || statuses[0];
+            const StatusIcon = status.Icon;
+            const isDirty = draft.title !== task.title
+              || draft.description !== task.description
+              || draft.status !== task.status
+              || draft.user_id !== task.user_id;
             return (
             <article className="task-card" key={task.id}>
+              <div className="task-meta">
+                <span className={`status-pill ${draft.status}`}>
+                  <StatusIcon size={14} /> {status.label}
+                </span>
+                {user.role === "admin" && <span className="owner-label">{task.owner_email}</span>}
+              </div>
               <div className="task-card-header">
                 <input value={draft.title} onChange={(e) => updateDraft(task.id, { title: e.target.value })} />
                 <button className="icon-button danger" onClick={() => deleteTask(task.id)} aria-label="Delete task" title="Delete task">
@@ -218,11 +257,10 @@ export default function Dashboard({ user, onLogout }) {
                     {users.map((owner) => <option key={owner.id} value={owner.id}>{owner.email}</option>)}
                   </select>
                 )}
-                <button className="save-button" onClick={() => updateTask(task.id, draft)}>
+                <button className="save-button" disabled={!isDirty} onClick={() => updateTask(task.id, draft)}>
                   <Save size={16} /> Save
                 </button>
               </div>
-              {user.role === "admin" && <span className="owner-label">Owner: {task.owner_email}</span>}
             </article>
             );
           })}

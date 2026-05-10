@@ -303,7 +303,7 @@ pytest
 Expected result:
 
 ```text
-8 passed
+9 passed
 ```
 
 Frontend production build:
